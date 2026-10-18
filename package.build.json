@@ -1,0 +1,14 @@
+{
+  "name": "dsh-session-categories-build",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Build workspace for the dsh-session-categories Web client bundle",
+  "type": "module",
+  "scripts": {
+    "build": "tsdown"
+  },
+  "devDependencies": {
+    "tsdown": "0.22.2",
+    "typescript": "6.0.3"
+  }
+}

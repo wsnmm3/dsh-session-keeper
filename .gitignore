@@ -1,0 +1,8 @@
+node_modules/
+*.tgz
+.DS_Store
+*.tsbuildinfo
+packages/**/lib/
+dist/
+_recovered-css/
+*.bak-*
