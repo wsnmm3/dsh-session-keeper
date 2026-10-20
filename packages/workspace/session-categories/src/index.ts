@@ -1,5 +1,6 @@
 /** Host service for durable Workspace-scoped Session categories. */
 import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -7,7 +8,11 @@ import { WorkspaceUnknownSessionError } from '@deepseek-ai/dsh-workspace'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import type { DomainGlobal } from '@deepseek-ai/dsh-storage-domain'
 import { sessionCategoriesDomainSpec } from './spec.ts'
-import { listBatches, recycleSessions, restoreBatch, sweepTrash } from './recycle.ts'
+import {
+  listBatches, listTrashedSessions, moveSessionLog, persistBatch, purgeBatch, readTranscript,
+  recycleArtifacts, restoreBatch, scanSession, sweepTrash, trashRoot,
+} from './recycle.ts'
+import type { AllowedArtifact, RecycleBatch, RecycledSession, StoredSessionId } from './recycle.ts'
 import type {
   SessionCategory, SessionCategoryAssignment, SessionCategoryCreateRequest,
   SessionCategoryDocument, SessionCategoryGetRequest, SessionCategoryGetResult,
@@ -18,8 +23,10 @@ import type {
 } from './types.ts'
 import type {
   SessionRecycleDeleteRequest, SessionRecycleDeleteResult, SessionRecycleListResult,
-  SessionRecycleSweepRequest, SessionRecycleSweepResult,
-  SessionRecycleUndoRequest, SessionRecycleUndoResult,
+  SessionRecyclePurgeRequest, SessionRecyclePurgeResult, SessionRecycleScanRequest,
+  SessionRecycleScanResult, SessionRecycleSweepRequest, SessionRecycleSweepResult,
+  SessionRecycleTranscriptRequest, SessionRecycleTranscriptResult,
+  SessionRecycleTrashedResult, SessionRecycleUndoRequest, SessionRecycleUndoResult,
 } from './recycle-types.ts'
 
 export type * from './recycle-types.ts'
@@ -262,29 +269,84 @@ export class SessionCategoriesService extends TypertRemoteService {
    */
   @Remote('deleteSessions')
   async deleteSessions(request: SessionRecycleDeleteRequest): Promise<SessionRecycleDeleteResult> {
+    const scope = request.scope ?? 'record'
+    const withArtifacts = scope === 'artifacts' || scope === 'everything'
     const workspace = request.workspaceId === undefined
       ? undefined
       : this.ctx.workspaceRegistry.get(request.workspaceId)
-    const result = await recycleSessions({
-      sessionIds: request.sessionIds,
-      ...(request.workspaceId === undefined ? {} : { workspaceId: request.workspaceId }),
-      ...(workspace === undefined ? {} : { workspacePath: workspace.path }),
-      ...(request.reason === undefined ? {} : { reason: request.reason }),
-    })
-    if (!result.ok) {
-      const { code, sessionId } = result.error
-      return { ok: false, error: sessionId === undefined ? { code } : { code, sessionId } }
+    const stamp = new Date().toISOString()
+    const batchId = stamp.replace(/[:.]/g, '-')
+    const batchDir = join(trashRoot(), batchId)
+    const entries: RecycledSession[] = []
+    const detachedFrom: string[] = []
+    const wasArchived: StoredSessionId[] = []
+    let artifacts: AllowedArtifact[] = []
+
+    for (const sessionId of request.sessionIds) {
+      // Archive first: a Session that is pinned or selected disappears from the
+      // browser immediately, and archiving is the only signal the workspace
+      // registry offers that survives a restart. The undo path always
+      // un-archives, so an archive made here is a one-way door we then reopen.
+      if (request.workspaceId !== undefined) {
+        try {
+          const entry = this.ctx.workspaceRegistry.get(request.workspaceId)
+          if (entry.archivedSessionIds.includes(sessionId)) wasArchived.push(sessionId)
+          else await entry.archiveSession(sessionId, { stopActivity: true })
+          if (entry.sessionIds.includes(sessionId)) {
+            await entry.detachSession(sessionId)
+            detachedFrom.push(request.workspaceId)
+          }
+        } catch {
+          // The log move below is the operation the user asked for; a registry
+          // that refuses this id must not abort it.
+        }
+      }
+      if (withArtifacts && artifacts.length === 0 && request.sessionIds.length === 1) {
+        const scan = await scanSession(sessionId)
+        artifacts = scan.artifacts.allowed
+      }
+      const moved = await moveSessionLog(sessionId, batchDir, {
+        ...(request.workspaceId === undefined ? {} : { workspaceId: request.workspaceId }),
+        ...(workspace === undefined ? {} : { workspacePath: workspace.path }),
+      })
+      if (!moved.ok) {
+        const { code, sessionId: failedId } = moved.error
+        return { ok: false, error: failedId === undefined ? { code } : { code, sessionId: failedId } }
+      }
+      entries.push(moved.entry)
     }
+
+    const artifactEntries = withArtifacts && artifacts.length > 0
+      ? await recycleArtifacts(batchDir, artifacts)
+      : []
+    const batch: RecycleBatch = {
+      batchId,
+      deletedAt: stamp,
+      ...(request.reason === undefined ? {} : { reason: request.reason }),
+      scope,
+      entries,
+      ...(artifactEntries.length === 0 ? {} : { artifactEntries }),
+      ...(wasArchived.length === 0 ? {} : { wasArchived }),
+      ...(detachedFrom.length === 0 ? {} : {
+        detachedFrom: entries.flatMap((entry): { sessionId: StoredSessionId; workspaceId: string }[] =>
+          entry.workspaceId === undefined ? [] : [{ sessionId: entry.sessionId, workspaceId: entry.workspaceId }]),
+      }),
+    }
+    await persistBatch(batchDir, batch)
     // Drop the category assignments of Sessions that no longer exist, so the
     // browser does not keep rendering a row for a removed log.
     await this.forgetSessions().catch(() => undefined)
     return {
       ok: true,
       value: {
-        batchId: result.batch.batchId,
-        deletedAt: result.batch.deletedAt,
-        sessionIds: result.batch.entries.map(entry => entry.sessionId),
-        reclaimedBytes: result.batch.entries.reduce((total, entry) => total + entry.sizeBytes, 0),
+        batchId,
+        deletedAt: stamp,
+        sessionIds: entries.map(entry => entry.sessionId),
+        bytes: entries.reduce((total, entry) => total + entry.sizeBytes, 0),
+        artifactCount: artifactEntries.length,
+        artifactBytes: artifactEntries.reduce((total, entry) => total + entry.sizeBytes, 0),
+        releasedArchived: wasArchived,
+        detachedFrom,
       },
     }
   }
@@ -296,10 +358,56 @@ export class SessionCategoriesService extends TypertRemoteService {
    * @returns which Sessions came back and which could not.
    */
   @Remote('undoDeleteSessions')
-  async undoDeleteSessions(request: SessionRecycleUndoRequest): Promise<SessionRecycleUndoResult> {
+  async undoDeleteSessions(request: SessionRecycleUndoRequest = {}): Promise<SessionRecycleUndoResult> {
+    const batches = await listBatches()
+    const batch = request.batchId === undefined ? batches[0] : batches.find(item => item.batchId === request.batchId)
     const result = await restoreBatch(request.batchId === undefined ? {} : { batchId: request.batchId })
     if (!result.ok) return { ok: false, error: { code: result.error.code } }
-    return { ok: true, value: { batchId: result.batchId, restored: result.restored, failed: result.failed } }
+    const rearchived: StoredSessionId[] = []
+    const reattached: StoredSessionId[] = []
+    if (batch !== undefined) {
+      const workspaceIds = new Set<string>()
+      for (const entry of batch.entries) if (entry.workspaceId !== undefined) workspaceIds.add(entry.workspaceId)
+      for (const workspaceId of workspaceIds) {
+        const restoredHere = batch.entries
+          .filter(entry => entry.workspaceId === workspaceId && result.restored.includes(entry.sessionId))
+          .map(entry => entry.sessionId)
+        if (restoredHere.length === 0) continue
+        try {
+          const entry = this.ctx.workspaceRegistry.get(workspaceId)
+          for (const sessionId of restoredHere) {
+            if (!entry.sessionIds.includes(sessionId)) {
+              await entry.attachSession(sessionId)
+              reattached.push(sessionId)
+            }
+          }
+          // Re-archive only when the archive was NOT made by this delete:
+          // an archive made by the delete is undone, a pre-existing one stays.
+          for (const sessionId of restoredHere) {
+            const wasArchivedBefore = (batch.wasArchived ?? []).includes(sessionId)
+            const archivedNow = entry.archivedSessionIds.includes(sessionId)
+            if (wasArchivedBefore && !archivedNow) {
+              await entry.archiveSession(sessionId, { stopActivity: false })
+              rearchived.push(sessionId)
+            } else if (!wasArchivedBefore && archivedNow) {
+              await entry.unarchiveSession(sessionId)
+            }
+          }
+        } catch {
+          // A Workspace that vanished must not fail the log restore.
+        }
+      }
+    }
+    return {
+      ok: true,
+      value: {
+        batchId: result.batchId,
+        restored: result.restored,
+        failed: result.failed,
+        reattached,
+        rearchived,
+      },
+    }
   }
 
   /**
@@ -318,7 +426,14 @@ export class SessionCategoriesService extends TypertRemoteService {
           deletedAt: batch.deletedAt,
           sessionIds: batch.entries.map(entry => entry.sessionId),
           bytes: batch.entries.reduce((total, entry) => total + entry.sizeBytes, 0),
+          ...(batch.reason === undefined ? {} : { reason: batch.reason }),
+          ...(batch.scope === undefined ? {} : { scope: batch.scope }),
+          ...(batch.artifactEntries === undefined ? {} : { artifactCount: batch.artifactEntries.length }),
         })),
+        totalBytes: batches.reduce(
+          (total, batch) => total + batch.entries.reduce((sum, entry) => sum + entry.sizeBytes, 0),
+          0,
+        ),
       },
     }
   }
@@ -330,12 +445,89 @@ export class SessionCategoriesService extends TypertRemoteService {
    * @returns the batches dropped and the bytes reclaimed.
    */
   @Remote('sweepRecycledSessions')
-  async sweepRecycledSessions(request: SessionRecycleSweepRequest): Promise<SessionRecycleSweepResult> {
+  async sweepRecycledSessions(request: SessionRecycleSweepRequest = {}): Promise<SessionRecycleSweepResult> {
     const result = await sweepTrash({
       ...(request.maxBatches === undefined ? {} : { maxBatches: request.maxBatches }),
       ...(request.maxAgeDays === undefined ? {} : { maxAgeDays: request.maxAgeDays }),
     })
-    return { ok: true, value: { removedBatchIds: result.removedBatches, reclaimedBytes: result.reclaimedBytes } }
+    return { ok: true, value: { removedBatches: result.removedBatches, reclaimedBytes: result.reclaimedBytes } }
+  }
+
+  /**
+   * Report what deleting one Session would take, without touching the disk.
+   *
+   * The confirmation dialog renders this, and the artifacts-scoped delete
+   * moves exactly what it lists: the two cannot diverge.
+   *
+   * @param request - the Session to scan.
+   * @returns the log size, the artifact list, and every refusal.
+   */
+  @Remote('scanSession')
+  async scanSession(request: SessionRecycleScanRequest): Promise<SessionRecycleScanResult> {
+    const scan = await scanSession(request.sessionId)
+    return {
+      ok: true,
+      value: {
+        sessionId: scan.sessionId,
+        cwd: scan.cwd ?? '',
+        storeBytes: scan.store.bytes,
+        directories: scan.store.directories,
+        artifacts: scan.artifacts.allowed.map(row => ({
+          displayPath: row.displayPath,
+          bytes: row.bytes,
+          ops: row.ops,
+        })),
+        refused: scan.artifacts.refused,
+        artifactBytes: scan.artifacts.totalBytes,
+        warnings: scan.warnings,
+      },
+    }
+  }
+
+  /**
+   * Read one stored transcript, whether it is live or already trashed.
+   *
+   * @param request - the Session and how many trailing messages to keep.
+   * @returns the readable rows, and whether the log was found and where.
+   */
+  @Remote('readTranscript')
+  async readTranscript(request: SessionRecycleTranscriptRequest): Promise<SessionRecycleTranscriptResult> {
+    const report = await readTranscript(request.sessionId, request.limit ?? 200)
+    return { ok: true, value: report }
+  }
+
+  /**
+   * List every Session currently inside the bin.
+   *
+   * @returns one row per trashed Session, newest batch first.
+   */
+  @Remote('listTrashedSessions')
+  async listTrashedSessions(): Promise<SessionRecycleTrashedResult> {
+    const sessions = await listTrashedSessions()
+    return { ok: true, value: { sessions } }
+  }
+
+  /**
+   * Erase one batch for good, after the user confirmed it.
+   *
+   * This and the retention sweep are the only paths that destroy a stored log;
+   * everything else moves it into the bin.
+   *
+   * @param request - the batch to erase.
+   * @returns the bytes freed, or a failure code.
+   */
+  @Remote('purgeBatch')
+  async purgeBatch(request: SessionRecyclePurgeRequest): Promise<SessionRecyclePurgeResult> {
+    const result = await purgeBatch(request.batchId)
+    if (!result.ok) {
+      return { ok: false, error: result.error.batchId === undefined
+        ? { code: result.error.code }
+        : { code: result.error.code, batchId: result.error.batchId } }
+    }
+    return {
+      ok: true,
+      value: { batchId: result.batchId, reclaimedBytes: result.reclaimedBytes },
+    }
   }
 
   /**

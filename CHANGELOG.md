@@ -20,6 +20,47 @@ against this build.
 > `dist/superseded/` and is byte-identical to `1.1.6.tgz` apart from the
 > version string inside its manifest.
 
+## [1.1.7] — 2026-10-20
+
+### Fixed
+
+- **The delete bin works again after `dsh-session-recycle` is uninstalled.**
+  The bin was dead for one reason: this plugin carried only the Client half and
+  every `/session-recycle/*` route came from that separate package. Once the
+  human uninstalled it, the bin reported `delete-failed` and 「无法统计删除范围」.
+  The Host half now serves the whole lifecycle itself, so the fork depends on no
+  other recycle plugin. The five recycle verbs (`listRecycledSessions`,
+  `deleteSessions`, `undoSessions`, `purgeBatch`, `sweepRecycledSessions`) and
+  three transcript/scan verbs (`scanSession`, `readTranscript`,
+  `listTrashedSessions`) are all registered through typert Remote on
+  `sessionCategories`, and the Client calls them through the API gateway
+  (`/api/sessionCategories/*`) instead of fetching a route the Host never
+  registered.
+
+- **The Client no longer crashes on the batch list.** A Remote reply is wrapped
+  twice (`{ok, value:{ok, value}}`); the controller unwrapped one layer and then
+  called `.filter` on the wrapper, which took the whole settings page down. Both
+  Remote calls now go through the same two-step unwrap the rest of the controller
+  uses.
+
+- **The Client no longer double-wraps the Remote argument.** `controller.ts`
+  sent `{ request: {...} }` to a stub whose first parameter already *is* the
+  wire request, so the gateway answered `input-invalid` for every verb.
+
+- **`seed/typert.host.js` no longer ships a bare `export`.** The descriptor
+  injector used to split the `export` keyword off the `TYPERT` declaration and
+  leave `export // --- comment ---` behind, which is a syntax error: the whole
+  Host module failed to import and every verb 404'd. The injector now anchors on
+  the declaration and cleans up any bare export left by older runs.
+
+### Changed
+
+- `scripts/pack-release.mjs` defaults to this fork's own installed copy
+  (`dsh-session-keeper`) instead of the upstream `dsh-session-categories`
+  directory, which this profile no longer has. The identity rewrite also covers
+  the double-quoted `PACKAGE_NAME = "@deepseek-ai/dsh-session-categories"` in
+  `lib/invariant.js`, which the single-quoted rules missed.
+
 ## [1.1.6] — 2026-10-18
 
 ### Added

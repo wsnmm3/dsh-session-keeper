@@ -132,7 +132,16 @@ if (deleteDescriptor !== undefined) {
   try {
     resultSchema.parse({
       ok: true,
-      value: { batchId: 'b', deletedAt: '2026-10-17T00:00:00.000Z', sessionIds: ['session-x'], reclaimedBytes: 10 },
+      value: {
+        batchId: 'b',
+        deletedAt: '2026-10-17T00:00:00.000Z',
+        sessionIds: ['session-x'],
+        bytes: 10,
+        artifactCount: 0,
+        artifactBytes: 0,
+        releasedArchived: [],
+        detachedFrom: [],
+      },
     })
     console.log('round trip       : deleteSessions success accepted')
   } catch (error) {

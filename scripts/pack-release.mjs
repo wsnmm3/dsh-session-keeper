@@ -22,11 +22,13 @@ const root = path.resolve(import.meta.dirname, '..')
 const dist = path.join(root, 'dist')
 const stage = path.join(dist, 'package')
 
-// The installed profile copy defines the release layout (see BUILD.md). The
-// directory keeps the upstream name because that is what is installed on this
-// machine; the packed package is renamed to this fork's own name.
+// The installed profile copy defines the release layout (see BUILD.md). This
+// fork ships as its own package (dsh-session-keeper) and the upstream
+// dsh-session-categories directory is gone from this profile, so the default
+// points at the fork's own installed copy. It carries the same release layout:
+// prebuilt lib/types, thin re-export entries, seed-owned typert.host.js.
 const reference = process.env.DSH_PLUGIN_INSTALLED
-  ?? 'C:\\Users\\ASUS 98\\.dsh\\profiles\\desktop\\node_modules\\dsh-session-categories'
+  ?? 'C:\\Users\\ASUS 98\\.dsh\\profiles\\desktop\\node_modules\\dsh-session-keeper'
 
 const copy = async (from, to) => {
   await fs.mkdir(path.dirname(to), { recursive: true })
@@ -83,6 +85,10 @@ await copy(path.join(root, 'lib', 'client.js.map'), path.join(libDst, 'client.js
 //     The reference copy in the installed profile still carries the upstream
 //     name, so the renamed seed has to overwrite it or the published package
 //     mounts without any Remote methods at all.
+//
+// The seed carries the recycle invocations that scripts/inject-recycle-descriptors.mjs
+// rebuilds from the service source; without them the gateway rejects every
+// /session-recycle verb before the service is reached.
 const hostSeed = path.join(root, 'seed', 'typert.host.js')
 if (await exists(hostSeed)) await copy(hostSeed, path.join(libDst, 'typert.host.js'))
 
@@ -117,6 +123,10 @@ const RENAMES = [
   ["'dsh-session-categories/src/", "'dsh-session-keeper/src/"],
   ['"dsh-session-categories/src/', '"dsh-session-keeper/src/'],
   ["PACKAGE_NAME = 'dsh-session-categories'", "PACKAGE_NAME = 'dsh-session-keeper'"],
+  // lib/invariant.js spells the register() key with double quotes and the
+  // upstream scope, which none of the single-quoted rules above match.
+  ['"@deepseek-ai/dsh-session-categories"', '"dsh-session-keeper"'],
+  ["PACKAGE_NAME = \"@deepseek-ai/dsh-session-categories\"", "PACKAGE_NAME = 'dsh-session-keeper'"],
 ]
 let rewritten = 0
 const walkStaged = async (dir) => {
@@ -172,7 +182,9 @@ const stat = await fs.stat(tarball)
 console.log(`packed ${path.relative(root, tarball)} (${stat.size} bytes, npm said ${packResult.stdout.trim()})`)
 
 // 7. Verify the tarball carries what the loader needs.
-const { stdout: listing } = await run('tar', ['-tzf', tarball], { shell: true })
+// GNU tar on Windows reads "E:\..." as an rsh host spec and dies with
+// "Cannot connect to E" — pass the bare filename with cwd instead.
+const { stdout: listing } = await run('tar', ['-tzf', path.basename(tarball)], { shell: true, cwd: dist })
 const entries = listing.split(/\r?\n/).filter(Boolean)
 const required = [
   'package/package.json',

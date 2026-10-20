@@ -381,6 +381,151 @@ const _deepseek_ai_dsh_session_categories_sessionCategories_reorderCategory_resu
 })]).readonly(),
 })])
 
+// --- session recycle methods (added by scripts/inject-recycle-descriptors.mjs) ---
+const _deepseek_ai_dsh_session_categories_sessionCategories_deleteSessions_parameter_0$schema = z.object({
+  'sessionIds': z.array(z.string().readonly()).readonly(),
+  'workspaceId': z.intersection(z.string(), z.unknown()).readonly().optional(),
+  'reason': z.intersection(z.string(), z.unknown()).readonly().optional(),
+  'scope': z.union([z.literal("record"), z.literal("artifacts"), z.literal("everything")]).readonly().optional(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_deleteSessions_result$schema = z.union([z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'batchId': z.string().readonly(),
+  'deletedAt': z.string().readonly(),
+  'sessionIds': z.array(z.string().readonly()).readonly(),
+  'bytes': z.number().readonly(),
+  'artifactCount': z.number().readonly(),
+  'artifactBytes': z.number().readonly(),
+  'releasedArchived': z.array(z.string().readonly()).readonly(),
+  'detachedFrom': z.array(z.string().readonly()).readonly(),
+}).readonly(),
+}), z.object({
+  'ok': z.literal(false).readonly(),
+  'error': z.object({
+  'code': z.string().readonly(),
+  'sessionId': z.intersection(z.string(), z.unknown()).readonly().optional(),
+}).readonly(),
+})])
+const _deepseek_ai_dsh_session_categories_sessionCategories_undoDeleteSessions_parameter_0$schema = z.object({
+  'batchId': z.intersection(z.string(), z.unknown()).readonly().optional(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_undoDeleteSessions_result$schema = z.union([z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'batchId': z.string().readonly(),
+  'restored': z.array(z.string().readonly()).readonly(),
+  'failed': z.array(z.object({
+    'sessionId': z.string().readonly(),
+    'reason': z.string().readonly(),
+  }).readonly()).readonly(),
+  'reattached': z.array(z.string().readonly()).readonly(),
+  'rearchived': z.array(z.string().readonly()).readonly(),
+}).readonly(),
+}), z.object({
+  'ok': z.literal(false).readonly(),
+  'error': z.object({
+  'code': z.string().readonly()
+}).readonly(),
+})])
+const _deepseek_ai_dsh_session_categories_sessionCategories_listRecycledSessions_result$schema = z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'batches': z.array(z.object({
+    'batchId': z.string().readonly(),
+    'deletedAt': z.string().readonly(),
+    'sessionIds': z.array(z.string().readonly()).readonly(),
+    'bytes': z.number().readonly(),
+    'reason': z.intersection(z.string(), z.unknown()).readonly().optional(),
+    'scope': z.union([z.literal("record"), z.literal("artifacts"), z.literal("everything")]).readonly().optional(),
+    'artifactCount': z.number().readonly().optional(),
+  }).readonly()).readonly(),
+  'totalBytes': z.number().readonly(),
+}).readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_sweepRecycledSessions_parameter_0$schema = z.object({
+  'maxBatches': z.number().readonly().optional(),
+  'maxAgeDays': z.number().readonly().optional(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_sweepRecycledSessions_result$schema = z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'removedBatches': z.array(z.string().readonly()).readonly(),
+  'reclaimedBytes': z.number().readonly(),
+}).readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_scanSession_parameter_0$schema = z.object({
+  'sessionId': z.string().readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_scanSession_result$schema = z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'sessionId': z.string().readonly(),
+  'cwd': z.string().readonly(),
+  'storeBytes': z.number().readonly(),
+  'directories': z.number().readonly(),
+  'artifacts': z.array(z.object({
+    'displayPath': z.string().readonly(),
+    'bytes': z.number().readonly(),
+    'ops': z.string().readonly(),
+  }).readonly()).readonly(),
+  'refused': z.array(z.object({
+    'path': z.string().readonly(),
+    'reason': z.string().readonly(),
+  }).readonly()).readonly(),
+  'artifactBytes': z.number().readonly(),
+  'warnings': z.array(z.string().readonly()).readonly(),
+}).readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_readTranscript_parameter_0$schema = z.object({
+  'sessionId': z.string().readonly(),
+  'limit': z.number().readonly().optional(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_readTranscript_result$schema = z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'sessionId': z.string().readonly(),
+  'found': z.boolean().readonly(),
+  'trashed': z.boolean().readonly(),
+  'total': z.number().readonly(),
+  'toolCalls': z.number().readonly(),
+  'messages': z.array(z.object({
+    'role': z.union([z.literal("user"), z.literal("assistant"), z.literal("tool")]).readonly(),
+    'type': z.string().readonly(),
+    'text': z.string().readonly(),
+    'time': z.number().readonly().optional(),
+  }).readonly()).readonly(),
+}).readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_listTrashedSessions_result$schema = z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'sessions': z.array(z.object({
+    'sessionId': z.string().readonly(),
+    'batchId': z.string().readonly(),
+    'deletedAt': z.string().readonly(),
+    'bytes': z.number().readonly(),
+    'container': z.string().readonly(),
+  }).readonly()).readonly(),
+}).readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_purgeBatch_parameter_0$schema = z.object({
+  'batchId': z.string().readonly(),
+})
+const _deepseek_ai_dsh_session_categories_sessionCategories_purgeBatch_result$schema = z.union([z.object({
+  'ok': z.literal(true).readonly(),
+  'value': z.object({
+  'batchId': z.string().readonly(),
+  'reclaimedBytes': z.number().readonly(),
+}).readonly(),
+}), z.object({
+  'ok': z.literal(false).readonly(),
+  'error': z.object({
+  'code': z.string().readonly(),
+  'batchId': z.intersection(z.string(), z.unknown()).readonly().optional(),
+}).readonly(),
+})])
+
 export const TYPERT = {
   package: 'dsh-session-keeper',
   face: 'host',
@@ -587,6 +732,184 @@ export const TYPERT = {
       },
       sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":167,"column":3},
     },
+    {
+      id: 'dsh-session-keeper#sessionCategories/deleteSessions',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'deleteSessions',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecycleDeleteRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_deleteSessions_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleDeleteResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_deleteSessions_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":270,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/undoDeleteSessions',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'undoDeleteSessions',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecycleUndoRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_undoDeleteSessions_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleUndoResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_undoDeleteSessions_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":360,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/listRecycledSessions',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'listRecycledSessions',
+      invocation: { kind: 'direct' },
+      parameters: [],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleListResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_listRecycledSessions_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":418,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/sweepRecycledSessions',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'sweepRecycledSessions',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecycleSweepRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_sweepRecycledSessions_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleSweepResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_sweepRecycledSessions_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":447,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/scanSession',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'scanSession',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecycleScanRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_scanSession_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleScanResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_scanSession_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":465,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/readTranscript',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'readTranscript',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecycleTranscriptRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_readTranscript_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleTranscriptResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_readTranscript_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":493,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/listTrashedSessions',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'listTrashedSessions',
+      invocation: { kind: 'direct' },
+      parameters: [],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecycleTrashedResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_listTrashedSessions_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":504,"column":3},
+    },
+    {
+      id: 'dsh-session-keeper#sessionCategories/purgeBatch',
+      service: 'sessionCategories',
+      namespace: 'sessionCategories',
+      method: 'purgeBatch',
+      invocation: { kind: 'direct' },
+      parameters: [
+        {
+          name: 'request',
+          wire: 'request',
+          source: 'json',
+          codec: {
+            mode: 'strict',
+            typeSymbol: 'dsh-session-keeper/types#SessionRecyclePurgeRequest',
+            create: () => _deepseek_ai_dsh_session_categories_sessionCategories_purgeBatch_parameter_0$schema,
+          },
+        },
+      ],
+      result: {
+        mode: 'strict',
+        typeSymbol: 'dsh-session-keeper/types#SessionRecyclePurgeResult',
+        create: () => _deepseek_ai_dsh_session_categories_sessionCategories_purgeBatch_result$schema,
+      },
+      sourceLocation: {"file":"packages/workspace/session-categories/src/index.ts","line":519,"column":3},
+    },
   ],
   model: {
     "services": [
@@ -660,7 +983,65 @@ export const TYPERT = {
             "signature": "snapshotAll(): SessionCategoryDocument",
             "summary": "Current full document for invariant companions.",
             "jsDoc": "/** Current full document for invariant companions. */"
-          }
+          },
+        // --- session recycle members (added by scripts/inject-recycle-descriptors.mjs) ---
+          {
+            "kind": "method",
+            "name": "deleteSessions",
+            "signature": "@Remote('deleteSessions') deleteSessions(request: SessionRecycleDeleteRequest): Promise<SessionRecycleDeleteResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "undoDeleteSessions",
+            "signature": "@Remote('undoDeleteSessions') undoDeleteSessions(request: SessionRecycleUndoRequest): Promise<SessionRecycleUndoResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "listRecycledSessions",
+            "signature": "@Remote('listRecycledSessions') listRecycledSessions(): Promise<SessionRecycleListResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "sweepRecycledSessions",
+            "signature": "@Remote('sweepRecycledSessions') sweepRecycledSessions(request: SessionRecycleSweepRequest): Promise<SessionRecycleSweepResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "scanSession",
+            "signature": "@Remote('scanSession') scanSession(request: SessionRecycleScanRequest): Promise<SessionRecycleScanResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "readTranscript",
+            "signature": "@Remote('readTranscript') readTranscript(request: SessionRecycleTranscriptRequest): Promise<SessionRecycleTranscriptResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "listTrashedSessions",
+            "signature": "@Remote('listTrashedSessions') listTrashedSessions(): Promise<SessionRecycleTrashedResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+          {
+            "kind": "method",
+            "name": "purgeBatch",
+            "signature": "@Remote('purgeBatch') purgeBatch(request: SessionRecyclePurgeRequest): Promise<SessionRecyclePurgeResult>",
+            "summary": "",
+            "jsDoc": "/** Restored from the recycle route. */"
+          },
+        // --- end session recycle members ---
         ],
         "types": [
           {
@@ -794,7 +1175,65 @@ export const TYPERT = {
           {
             "name": "WorkspaceId",
             "declaration": "export type WorkspaceId = Branded<'WorkspaceId'>;"
-          }
+          },
+        // --- session recycle types (added by scripts/inject-recycle-descriptors.mjs) ---
+          {
+            "name": "SessionRecycleDeleteRequest",
+            "declaration": "export type SessionRecycleDeleteRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleDeleteResult",
+            "declaration": "export type SessionRecycleDeleteResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleUndoRequest",
+            "declaration": "export type SessionRecycleUndoRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleUndoResult",
+            "declaration": "export type SessionRecycleUndoResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleListResult",
+            "declaration": "export type SessionRecycleListResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleSweepRequest",
+            "declaration": "export type SessionRecycleSweepRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleSweepResult",
+            "declaration": "export type SessionRecycleSweepResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleScanRequest",
+            "declaration": "export type SessionRecycleScanRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleScanResult",
+            "declaration": "export type SessionRecycleScanResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleTranscriptRequest",
+            "declaration": "export type SessionRecycleTranscriptRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleTranscriptResult",
+            "declaration": "export type SessionRecycleTranscriptResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecycleTrashedResult",
+            "declaration": "export type SessionRecycleTrashedResult = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecyclePurgeRequest",
+            "declaration": "export type SessionRecyclePurgeRequest = ImportedFromWire;"
+          },
+          {
+            "name": "SessionRecyclePurgeResult",
+            "declaration": "export type SessionRecyclePurgeResult = ImportedFromWire;"
+          },
+        // --- end session recycle types ---
         ]
       }
     ],

@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-keeper",
   "description": "会话管理 for DeepSeek Harness: workspace-scoped category trees, drag reordering, pinning, an archive section and a reversible delete bin. Loads on current dsh.",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "publishConfig": {
     "access": "public"
   },

@@ -192,3 +192,21 @@ export type SessionCategoryMutationResult = SessionCategorySuccess | SessionCate
 export type SessionCategoryGetResult =
   | SessionCategorySuccess
   | { readonly ok: false; readonly error: SessionCategoryWorkspaceNotFound }
+
+// --- Session recycle wire types -------------------------------------------------
+//
+// The descriptor generator resolves every `typeSymbol` against this module
+// (`dsh-session-keeper/types#<Type>`), so the recycle verbs' request and result
+// shapes have to be visible from here even though the shapes themselves are
+// declared next to the recycle implementation.
+
+export type {
+  RecycledBatchSummary, RecycledSessionSummary, SessionRecycleDeleteRequest,
+  SessionRecycleDeleteResult, SessionRecycleListResult, SessionRecyclePurgeRequest,
+  SessionRecyclePurgeResult, SessionRecycleScanArtifact, SessionRecycleScanRefusal,
+  SessionRecycleScanRequest, SessionRecycleScanResult, SessionRecycleSweepRequest,
+  SessionRecycleSweepResult, SessionRecycleTranscriptRequest,
+  SessionRecycleTranscriptResult, SessionRecycleTrashedResult,
+  SessionRecycleUndoRequest, SessionRecycleUndoResult, TranscriptMessage,
+  TrashedSessionSummary,
+} from './recycle-types.ts'

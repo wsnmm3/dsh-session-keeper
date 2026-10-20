@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-client-ui-session-categories/client/controller
  */
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
-import type { RemoteResult, TypertClientRemote } from '@deepseek-ai/dsh-typert-protocol'
+import type { RemoteFailure, RemoteResult, TypertClientRemote } from '@deepseek-ai/dsh-typert-protocol'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace'
 import type {
@@ -15,14 +15,6 @@ import type { RecycledBatchSummary, TranscriptMessage, TrashedSessionSummary } f
 
 /** Generated Session categories Remote methods used by the client controller. */
 export type SessionCategoriesRemote = TypertClientRemote['sessionCategories']
-
-/**
- * Host route prefix owned by the `dsh-session-recycle` plugin's Host half.
- *
- * The recycle verbs call these routes instead of Remote methods; see the
- * `Session recycling` region for why.
- */
-const RECYCLE_ROUTE = '/session-recycle'
 
 /** Controller load state across every requested Workspace. */
 export type SessionCategoriesStatus = 'cold' | 'loading' | 'ready' | 'error'
@@ -210,34 +202,25 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
   // disposal, and a failure is returned rather than thrown so the browser can
   // put the Host's own code in front of the user.
   //
-  // They travel over the plugin's own HTTP routes rather than the typert Remote
-  // namespace. The Remote methods exist on the Host, but the namespace the
-  // client receives is produced by a generator this repository does not carry,
-  // and a hand-injected descriptor does not reach the runtime table —calling
-  // it threw `remote.deleteSessions is not a function`. A plain route is served
-  // by the same origin the page already talks to, needs no codegen, and was
-  // verified reachable from inside the page.
+  // They travel over the plugin's own typert Remote namespace, like every other
+  // verb on this controller. The Host half registers them next to the category
+  // methods and the client namespace is generated from that same face, so the
+  // call arrives at a mounted method instead of a route no Host plugin serves.
+  // The wire vocabulary lives in \`dsh-session-keeper/types\`; only the names the
+  // presentation layer speaks (\`reclaimedBytes\`, \`removedBatchIds\`) differ, and
+  // the translation happens here rather than in the components.
 
   /**
-   * POST one JSON body to a session-recycle route.
+   * Turn one Remote failure into the code string the verbs report.
    *
-   * @param path - route path below the plugin prefix.
-   * @param body - JSON payload.
-   * @returns the parsed reply.
+   * @param carried - the error branch of a Remote result.
+   * @param fallback - code used when the failure carries no usable code.
+   * @returns the Host's stable failure code.
    */
-  private async recyclePost(path: string, body: unknown): Promise<Record<string, unknown>> {
-    const response = await fetch(`${RECYCLE_ROUTE}${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body ?? {}),
-    })
-    const text = await response.text()
-    if (text.trim() === '') return {}
-    try {
-      return JSON.parse(text) as Record<string, unknown>
-    } catch {
-      throw new Error(`the host returned a non-JSON reply (${response.status})`)
-    }
+  private static codeOf(carried: RemoteFailure | undefined, fallback: string): string {
+    if (carried === undefined) return fallback
+    const code = (carried as { code?: unknown }).code
+    return typeof code === 'string' && code !== '' ? code : fallback
   }
 
   /**
@@ -253,14 +236,16 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     { ok: true; value: { batchId: string; reclaimedBytes: number; artifactCount: number } } | { ok: false; error: { code: string; sessionId?: string } }
   > {
     if (this.disposed) return { ok: false, error: { code: 'disposed' } }
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/delete', { sessionId, scope })
+      carried = await this.remote.deleteSessions({ sessionIds: [sessionId], scope })
     } catch {
       return { ok: false, error: { code: 'route-failed', sessionId } }
     }
-    if (reply.ok !== true) {
-      return { ok: false, error: { code: String(reply.error ?? 'delete-failed'), sessionId } }
+    if (!carried.ok) return { ok: false, error: { code: SessionCategoriesController.codeOf(carried.error, 'delete-failed'), sessionId } }
+    const result = carried.value
+    if (result === undefined || result.ok !== true) {
+      return { ok: false, error: { code: (result as { error?: { code?: string } } | undefined)?.error?.code ?? 'delete-failed', sessionId } }
     }
     // The Session is gone from the browser's point of view, so drop any
     // category assignment the snapshot still carries before the Host's own
@@ -269,9 +254,9 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     return {
       ok: true,
       value: {
-        batchId: String(reply.batchId ?? ''),
-        reclaimedBytes: Number(reply.reclaimedBytes ?? 0),
-        artifactCount: Number(reply.artifactCount ?? 0),
+        batchId: result.value.batchId,
+        reclaimedBytes: result.value.bytes,
+        artifactCount: result.value.artifactCount,
       },
     }
   }
@@ -299,29 +284,32 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     | { ok: false; error: { code: string; sessionId?: string } }
   > {
     if (this.disposed) return { ok: false, error: { code: 'disposed' } }
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/scan', { sessionId })
+      carried = await this.remote.scanSession({ sessionId })
     } catch {
       return { ok: false, error: { code: 'route-failed', sessionId } }
     }
-    if (reply.ok !== true) {
-      return { ok: false, error: { code: String(reply.error ?? 'scan-failed'), sessionId } }
+    if (!carried.ok) return { ok: false, error: { code: SessionCategoriesController.codeOf(carried.error, 'scan-failed'), sessionId } }
+    const result = carried.value
+    if (result === undefined || result.ok !== true) {
+      return { ok: false, error: { code: (result as { error?: { code?: string } } | undefined)?.error?.code ?? 'scan-failed', sessionId } }
     }
+    const report = result.value
+    // The wire reports the stored log's directory count and the artifact byte
+    // total; the dialog wants the directories themselves named, and folds the
+    // artifact list under one byte count of its own.
     return {
       ok: true,
       value: {
-        cwd: typeof reply.cwd === 'string' ? reply.cwd : null,
-        store: {
-          directories: Array.isArray(reply.store?.directories) ? reply.store.directories as string[] : [],
-          bytes: Number(reply.store?.bytes ?? 0),
-        },
+        cwd: report.cwd,
+        store: { directories: [], bytes: report.storeBytes },
         artifacts: {
-          allowed: Array.isArray(reply.artifacts?.allowed) ? reply.artifacts.allowed as { displayPath: string; bytes: number }[] : [],
-          refused: Array.isArray(reply.artifacts?.refused) ? reply.artifacts.refused as { path: string; reason: string }[] : [],
-          totalBytes: Number(reply.artifacts?.totalBytes ?? 0),
+          allowed: report.artifacts.map(artifact => ({ displayPath: artifact.displayPath, bytes: artifact.bytes })),
+          refused: report.refused.map(row => ({ path: row.path, reason: row.reason })),
+          totalBytes: report.artifactBytes,
         },
-        warnings: Array.isArray(reply.warnings) ? reply.warnings as string[] : [],
+        warnings: report.warnings,
       },
     }
   }
@@ -336,48 +324,48 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     | { ok: false; error: { code: string } }
   > {
     if (this.disposed) return { ok: false, error: { code: 'disposed' } }
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/undo', {})
+      carried = await this.remote.undoDeleteSessions({})
     } catch {
       return { ok: false, error: { code: 'route-failed' } }
     }
-    if (reply.ok !== true) return { ok: false, error: { code: String(reply.error ?? 'undo-failed') } }
+    if (!carried.ok) return { ok: false, error: { code: SessionCategoriesController.codeOf(carried.error, 'undo-failed') } }
+    const result = carried.value
+    if (result === undefined || result.ok !== true) {
+      return { ok: false, error: { code: (result as { error?: { code?: string } } | undefined)?.error?.code ?? 'undo-failed' } }
+    }
     // Restored Sessions reappear through the Workspace registry, so reload
     // every loaded Workspace rather than guessing which one owns them.
     await this.resyncLoaded()
-    return {
-      ok: true,
-      value: {
-        restored: (reply.restored as SessionId[] | undefined) ?? [],
-        failed: (reply.failed as { sessionId: SessionId; reason: string }[] | undefined) ?? [],
-      },
-    }
+    return { ok: true, value: { restored: result.value.restored, failed: result.value.failed } }
   }
 
   /**
    * Report the recycle bin's contents.
    *
-   * Goes through the plugin's own `/session-recycle/list` route rather than the
-   * typert Remote namespace. The Remote method exists on the Host, but the
-   * namespace the client receives carries no `listRecycledSessions`, so calling
-   * it threw `this.remote.listRecycledSessions is not a function` and left the
-   * settings page stuck on "正在读取回收站…". The route is served by the same
-   * origin the page already talks to and is verified reachable — the delete,
-   * scan and undo verbs have used it all along.
-   *
    * @returns every undoable batch, newest first; an empty list on failure.
    */
   async listRecycledSessions(): Promise<readonly RecycledBatchSummary[]> {
     if (this.disposed) return []
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/list', {})
+      carried = await this.remote.listRecycledSessions()
     } catch {
       return []
     }
-    if (reply.ok !== true || !Array.isArray(reply.batches)) return []
-    return (reply.batches as RecycledBatchSummary[]).filter(batch => typeof batch?.batchId === 'string')
+    if (!carried.ok) return []
+    const result = carried.value
+    if (result === undefined || result.ok !== true) return []
+    const rows = result.value.batches
+    return rows
+      .filter(batch => typeof batch?.batchId === 'string')
+      .map(batch => ({
+        batchId: batch.batchId,
+        deletedAt: batch.deletedAt,
+        sessionIds: batch.sessionIds,
+        bytes: batch.bytes,
+      }))
   }
 
   /**
@@ -389,14 +377,23 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
    */
   async readTranscript(sessionId: SessionId, limit = 200): Promise<readonly TranscriptMessage[]> {
     if (this.disposed) return []
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/transcript', { sessionId, limit })
+      carried = await this.remote.readTranscript({ sessionId, limit })
     } catch {
       return []
     }
-    if (reply.ok !== true || !Array.isArray(reply.messages)) return []
-    return (reply.messages as TranscriptMessage[]).filter(message => typeof message?.text === 'string')
+    if (!carried.ok) return []
+    const result = carried.value
+    if (result === undefined || result.ok !== true) return []
+    return result.value.messages
+      .filter(message => typeof message?.text === 'string')
+      .map(message => ({
+        role: message.role,
+        type: message.type,
+        text: message.text,
+        ...(message.time === undefined ? {} : { time: message.time }),
+      }))
   }
 
   /**
@@ -405,14 +402,24 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
    */
   async listTrashedSessions(): Promise<readonly TrashedSessionSummary[]> {
     if (this.disposed) return []
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/trashed', {})
+      carried = await this.remote.listTrashedSessions()
     } catch {
       return []
     }
-    if (reply.ok !== true || !Array.isArray(reply.sessions)) return []
-    return (reply.sessions as TrashedSessionSummary[]).filter(row => typeof row?.sessionId === 'string')
+    if (!carried.ok) return []
+    const result = carried.value
+    if (result === undefined || result.ok !== true) return []
+    return result.value.sessions
+      .filter(row => typeof row?.sessionId === 'string')
+      .map(row => ({
+        sessionId: row.sessionId,
+        batchId: row.batchId,
+        deletedAt: row.deletedAt,
+        bytes: row.bytes,
+        container: row.container,
+      }))
   }
 
   /**
@@ -431,14 +438,18 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     { ok: true; value: { batchId: string; reclaimedBytes: number } } | { ok: false; error: { code: string } }
   > {
     if (this.disposed) return { ok: false, error: { code: 'disposed' } }
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/purge-batch', { batchId })
+      carried = await this.remote.purgeBatch({ batchId })
     } catch {
       return { ok: false, error: { code: 'route-failed' } }
     }
-    if (reply.ok !== true) return { ok: false, error: { code: String(reply.error ?? 'purge-failed') } }
-    return { ok: true, value: { batchId: String(reply.batchId ?? batchId), reclaimedBytes: Number(reply.reclaimedBytes ?? 0) } }
+    if (!carried.ok) return { ok: false, error: { code: SessionCategoriesController.codeOf(carried.error, 'purge-failed') } }
+    const result = carried.value
+    if (result === undefined || result.ok !== true) {
+      return { ok: false, error: { code: (result as { error?: { code?: string } } | undefined)?.error?.code ?? 'purge-failed' } }
+    }
+    return { ok: true, value: { batchId: result.value.batchId, reclaimedBytes: result.value.reclaimedBytes } }
   }
 
   /**
@@ -456,19 +467,23 @@ export class SessionCategoriesController implements HostObservable<SessionCatego
     { ok: true; value: { removedBatchIds: readonly string[]; reclaimedBytes: number } } | { ok: false; error: { code: string } }
   > {
     if (this.disposed) return { ok: false, error: { code: 'disposed' } }
-    let reply: Record<string, unknown>
+    let carried
     try {
-      reply = await this.recyclePost('/sweep', { maxBatches, maxAgeDays })
+      carried = await this.remote.sweepRecycledSessions({
+        ...(maxBatches === undefined ? {} : { maxBatches }),
+        ...(maxAgeDays === undefined ? {} : { maxAgeDays }),
+      })
     } catch {
       return { ok: false, error: { code: 'route-failed' } }
     }
-    if (reply.ok !== true) return { ok: false, error: { code: String(reply.error ?? 'sweep-failed') } }
+    if (!carried.ok) return { ok: false, error: { code: SessionCategoriesController.codeOf(carried.error, 'sweep-failed') } }
+    const result = carried.value
+    if (result === undefined || result.ok !== true) {
+      return { ok: false, error: { code: (result as { error?: { code?: string } } | undefined)?.error?.code ?? 'sweep-failed' } }
+    }
     return {
       ok: true,
-      value: {
-        removedBatchIds: Array.isArray(reply.removedBatchIds) ? reply.removedBatchIds as string[] : [],
-        reclaimedBytes: Number(reply.reclaimedBytes ?? 0),
-      },
+      value: { removedBatchIds: result.value.removedBatches, reclaimedBytes: result.value.reclaimedBytes },
     }
   }
 
