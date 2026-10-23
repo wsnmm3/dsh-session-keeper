@@ -133,6 +133,11 @@ export interface CategoryNode {
 export interface WorkspaceCategoryGroup {
   categories: readonly CategoryNode[]
   unclassifiedSessions: readonly SessionNode[]
+  /**
+   * Registry-global pinned Sessions hoisted above every category and the
+   * unclassified tail. Empty unless at least one visible Session is pinned.
+   */
+  pinnedSessions: readonly SessionNode[]
 }
 
 /** Viewing inputs for one Workspace's category projection. */
@@ -543,6 +548,12 @@ export function buildCategoryTree(
   pinnedSessionIds: readonly SessionId[] = [],
   /** Registry-global archive set, forwarded so rows know their own archive verb. */
   archivedSessionIds: readonly SessionId[] = [],
+  /**
+   * Whether pinned Sessions leave their category and render as one global
+   * section above every category (true), or stay inside the category that
+   * owns them and merely lead that category (false).
+   */
+  hoistPinned: boolean = true,
 ): WorkspaceCategoryGroup {
   const pinned = new Set(pinnedSessionIds)
   const archived = new Set(archivedSessionIds)
@@ -645,7 +656,8 @@ export function buildCategoryTree(
     const sessionCount = node.sessions.length + childNodes.reduce((count, child) => count + child.sessionCount, 0)
     // Stored manual order first, pin partition second: the pin lead is a stable
     // partition, so it keeps whatever order `ordered` already has.
-    const ordered = applyCategoryOrder(node.category.id, node.sessions.filter(matches))
+    const ordered = applyCategoryOrder(node.category.id, node.sessions.filter(item =>
+      matches(item) && (!hoistPinned || !pinned.has(item.id))))
     return {
       id: node.category.id,
       title: node.category.title,
@@ -658,9 +670,16 @@ export function buildCategoryTree(
     }
   }
 
+  // Pinned Sessions leave their category and the unclassified tail entirely:
+  // they render as one global section above every category, so a pin is a
+  // statement about the whole list, not about one group.
+  const pinnedVisible = hoistPinned ? sessions.filter(item => pinned.has(item.id) && matches(item)) : []
   return {
     categories: roots.map(project),
-    unclassifiedSessions: pinLead(unclassified.filter(matches)).map(item => sessionNode(item, descendants, pinned, archived)),
+    unclassifiedSessions: unclassified
+      .filter(item => matches(item) && (!hoistPinned || !pinned.has(item.id)))
+      .map(item => sessionNode(item, descendants, pinned, archived)),
+    pinnedSessions: pinnedVisible.map(item => sessionNode(item, descendants, pinned, archived)),
   }
 }
 

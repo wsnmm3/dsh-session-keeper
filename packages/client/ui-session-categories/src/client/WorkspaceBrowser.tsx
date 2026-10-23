@@ -15,7 +15,7 @@ import clsx from 'clsx'
 import {
   Button, IconArchiveCheckOutlineRegular, IconArchiveOffOutlineRegular, IconCloseFillRegular,
   IconPersonalizationOutlineRegular, IconProjectAddOutlineRegular, IconQueueOutlineRegular,
-  IconSearchOutlineRegular, Menu, Modal, Tooltip,
+  IconPinFillRegular, IconPinOutlineRegular, IconSearchOutlineRegular, Menu, Modal, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionId, SessionListState, SessionSearchResultItem, WorkspaceId, WorkspaceView,
@@ -168,13 +168,17 @@ function nextSessionOrderAccount({
 }
 
 /** Grouping and ordering menu; own open state so it resets with the wide chrome. */
-function ViewOptionsMenu({ groupBy, orderBy, archivedFilter, onGroupPick, onOrderPick, onArchivedFilterPick, t }: {
+function ViewOptionsMenu({ groupBy, orderBy, archivedFilter, hoistPinned, onGroupPick, onOrderPick, onArchivedFilterPick, onHoistPinnedPick, t }: {
   groupBy: SessionGroupBy
   orderBy: SessionOrderBy
   archivedFilter: 'default' | 'show' | 'only'
+  /** Whether pinned Sessions render in one global section above the categories. */
+  hoistPinned: boolean
   onGroupPick: (mode: SessionGroupBy) => void
   onOrderPick: (mode: SessionOrderBy) => void
   onArchivedFilterPick: (filter: 'default' | 'show' | 'only') => void
+  /** Toggle the global hoist of pinned Sessions. */
+  onHoistPinnedPick: (hoist: boolean) => void
   t: WorkspaceBrowserProps['t']
 }) {
   const [open, setOpen] = useState(false)
@@ -203,14 +207,25 @@ function ViewOptionsMenu({ groupBy, orderBy, archivedFilter, onGroupPick, onOrde
         { id: 'hide-archived', label: t('viewOptions.hideArchived'), icon: filterIcons['hide-archived'] },
         { id: 'show-archived', label: t('viewOptions.showArchived'), icon: filterIcons['show-archived'] },
         { id: 'only-archived', label: t('viewOptions.onlyArchived'), icon: filterIcons['only-archived'] },
+        { type: 'separator' as const, id: 'hoist-pinned-separator' },
+        { type: 'label' as const, id: 'hoist-pinned-label', text: t('viewOptions.hoist.label') },
+        { id: 'hoist-pinned', label: t('viewOptions.hoist.on'), icon: <IconPinFillRegular /> },
+        { id: 'keep-pinned', label: t('viewOptions.hoist.off'), icon: <IconPinOutlineRegular /> },
       ]}
-      selectedIds={[groupBy, orderBy, archivedFilter === 'show' ? 'show-archived' : archivedFilter === 'only' ? 'only-archived' : 'hide-archived']}
+      selectedIds={[
+        groupBy,
+        orderBy,
+        archivedFilter === 'show' ? 'show-archived' : archivedFilter === 'only' ? 'only-archived' : 'hide-archived',
+        hoistPinned ? 'hoist-pinned' : 'keep-pinned',
+      ]}
       onSelect={(id) => {
         if (id === 'workspace' || id === 'workspace-tree' || id === 'flat') onGroupPick(id)
         else if (id === 'manual' || id === 'updated') onOrderPick(id)
         else if (id === 'hide-archived') onArchivedFilterPick('default')
         else if (id === 'show-archived') onArchivedFilterPick('show')
         else if (id === 'only-archived') onArchivedFilterPick('only')
+        else if (id === 'hoist-pinned') onHoistPinnedPick(true)
+        else if (id === 'keep-pinned') onHoistPinnedPick(false)
         setOpen(false)
       }}
       align="end"
@@ -566,6 +581,7 @@ function SessionTree({
                 // hiding rows but would blank every verb marker; the raw set is
                 // what each row reads to decide archive vs unarchive.
                 archivedSessionIdsRaw,
+                hoistPinned,
               )
             const categoryChoices = categorySnapshot?.categories.map(category => {
               let depth = 0
@@ -786,6 +802,58 @@ function SessionTree({
                 if (workspaceDrag === null) return
                 commitWorkspaceDrag(workspaceDrag, { id: workspaceId, half })
               }
+            const renderSessionRow = (node: SessionNode): ReactNode => {
+
+          // Session drag never leaves its group. Ungrouped writes only the
+          // browser-local account; real Workspaces may also write Host order.
+            const sameGroupDrag = drag !== null && drag.accountKey === group.key
+            const archiveRow = group.key === ARCHIVED_KEY
+            const dragProps = {
+              start: () => {
+                sessionDropCommitted.current = false
+                setDrag({ accountKey: group.key, sessionId: node.id, over: null })
+              },
+              active: sameGroupDrag,
+              marker: sameGroupDrag && drag.over?.id === node.id ? drag.over.half : null,
+              hover: (half: 'before' | 'after') => {
+              /* v8 ignore next -- narrowing guard: Rows gates hover on `active`, which is false while the drag state is null. */
+                setDrag(d => (d === null ? d : { ...d, over: { id: node.id, half } }))
+              },
+              drop: (half: 'before' | 'after') => {
+              /* v8 ignore next -- narrowing guard: Rows gates drop on `active`, which is false while the drag state is null. */
+                if (drag === null) return
+                commitSessionDrag(drag, { id: node.id, half })
+              },
+              end: () => {
+                if (drag?.over !== null && drag?.over !== undefined) commitSessionDrag(drag, drag.over)
+                else setDrag(null)
+                sessionDropCommitted.current = false
+              },
+            }
+            return (
+              <SessionNodeItem
+                key={node.id}
+                node={node}
+                currentId={current}
+                now={now}
+                onOpen={open}
+                onRename={onSessionRename}
+                onFork={forkSession}
+                onArchive={onSessionArchive}
+                onUnarchive={onSessionUnarchive}
+                onDelete={onSessionDelete}
+                onPin={onSessionPin}
+                onUnpin={onSessionUnpin}
+                drag={archiveRow ? undefined : dragProps}
+                categoryMove={workspaceId === undefined ? undefined : {
+                  workspaceId, categories: categoryChoices,
+                  onMove: categoryId => assignSessions(workspaceId, [node.id], categoryId),
+                }}
+                t={t}
+              />
+            )
+
+            }
             return (
             // Group section: header row + expanded top-level session rows. The
             // inter-group breathing room is the section's own margin
@@ -847,57 +915,9 @@ function SessionTree({
                       },
                     }}
                 />
+                {group.expanded && categoryProjection?.pinnedSessions.map(node => renderSessionRow(node))}
                 {group.expanded && categoryProjection?.categories.map(node => renderCategory(node, 0))}
-                {visibleSessionRows.map((node) => {
-                // Session drag never leaves its group. Ungrouped writes only the
-                // browser-local account; real Workspaces may also write Host order.
-                  const sameGroupDrag = drag !== null && drag.accountKey === group.key
-                  const archiveRow = group.key === ARCHIVED_KEY
-                  const dragProps = {
-                    start: () => {
-                      sessionDropCommitted.current = false
-                      setDrag({ accountKey: group.key, sessionId: node.id, over: null })
-                    },
-                    active: sameGroupDrag,
-                    marker: sameGroupDrag && drag.over?.id === node.id ? drag.over.half : null,
-                    hover: (half: 'before' | 'after') => {
-                    /* v8 ignore next -- narrowing guard: Rows gates hover on `active`, which is false while the drag state is null. */
-                      setDrag(d => (d === null ? d : { ...d, over: { id: node.id, half } }))
-                    },
-                    drop: (half: 'before' | 'after') => {
-                    /* v8 ignore next -- narrowing guard: Rows gates drop on `active`, which is false while the drag state is null. */
-                      if (drag === null) return
-                      commitSessionDrag(drag, { id: node.id, half })
-                    },
-                    end: () => {
-                      if (drag?.over !== null && drag?.over !== undefined) commitSessionDrag(drag, drag.over)
-                      else setDrag(null)
-                      sessionDropCommitted.current = false
-                    },
-                  }
-                  return (
-                    <SessionNodeItem
-                      key={node.id}
-                      node={node}
-                      currentId={current}
-                      now={now}
-                      onOpen={open}
-                      onRename={onSessionRename}
-                      onFork={forkSession}
-                      onArchive={onSessionArchive}
-                      onUnarchive={onSessionUnarchive}
-                      onDelete={onSessionDelete}
-                      onPin={onSessionPin}
-                      onUnpin={onSessionUnpin}
-                      drag={archiveRow ? undefined : dragProps}
-                      categoryMove={workspaceId === undefined ? undefined : {
-                        workspaceId, categories: categoryChoices,
-                        onMove: categoryId => assignSessions(workspaceId, [node.id], categoryId),
-                      }}
-                      t={t}
-                    />
-                  )
-                })}
+                {visibleSessionRows.map(node => renderSessionRow(node))}
                 {projectedRows.length > COLLAPSED_SESSION_LIMIT && (
                   <button
                     type="button"
@@ -1218,6 +1238,9 @@ export function WorkspaceBrowser({
   const directoryFlowAvailable = true
   const groupBy = useStore(s => s.groupBy)
   const orderBy = useStore(s => s.orderBy)
+  // Pinned Sessions render in one global section above every category unless
+  // the view option says otherwise.
+  const hoistPinned = useStore(s => s.hoistPinned ?? true)
   // Archived rows are EXCLUDED from workspace groups unconditionally —they
   // live in their own trailing section. The three-state filter decides how
   // that section presents: default hides it entirely, show renders it
@@ -1680,9 +1703,11 @@ export function WorkspaceBrowser({
               groupBy={groupBy}
               orderBy={orderBy}
               archivedFilter={archivedFilter}
+              hoistPinned={hoistPinned}
               onGroupPick={(mode) => { actions.setGroupBy(mode) }}
               onOrderPick={(mode) => { actions.setOrderBy(mode) }}
               onArchivedFilterPick={(filter) => { actions.setArchivedFilter(filter) }}
+              onHoistPinnedPick={(hoist) => { actions.setHoistPinned(hoist) }}
               t={t}
             />
           )}

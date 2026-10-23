@@ -68,6 +68,15 @@ type WorkspaceViewState = {
   /** Last observed update timestamps per order account for one-time promotion events. */
   sessionUpdatedAtByAccount: Record<string, Record<string, number>>
   /**
+   * Whether pinned Sessions are hoisted into one global section above every
+   * category, or stay inside the category that owns them.
+   *
+   * A pin is a statement about prominence, so the default lifts the row out
+   * of its group entirely and renders it above the categories. Turning this
+   * off restores the in-category behaviour (the row leads its own group).
+   */
+  hoistPinned: boolean
+  /**
    * Whether the session-manager dialog is open.
    *
    * Deliberately NOT persisted (see the `persist` allow-list below): a dialog
@@ -97,6 +106,8 @@ type WorkspaceViewActions = {
     updatedAt: Record<string, number>,
   ) => void
   setSessionOrder: (draft: WorkspaceViewState, accountKey: string, order: string[]) => void
+  /** Toggle the global hoist of pinned Sessions out of their category. */
+  setHoistPinned: (draft: WorkspaceViewState, hoist: boolean) => void
   openManager: (draft: WorkspaceViewState) => void
   closeManager: (draft: WorkspaceViewState) => void
 }
@@ -116,6 +127,9 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
       categoryExpansion: {},
       sessionOrderByAccount: {},
       sessionUpdatedAtByAccount: {},
+      // Pinned Sessions start hoisted above every category: a pin is a
+      // statement about prominence in the whole list, not inside one group.
+      hoistPinned: true,
       managerOpen: false,
     }),
     persist: 'dsh.session-categories.view.v2',
@@ -157,6 +171,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
       setSessionOrder: (d, accountKey: string, order: string[]) => {
         d.sessionOrderByAccount[accountKey] = order
       },
+      setHoistPinned: (d, hoist) => { d.hoistPinned = hoist },
       openManager: (d) => { d.managerOpen = true },
       closeManager: (d) => { d.managerOpen = false },
     },

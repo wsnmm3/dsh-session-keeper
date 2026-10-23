@@ -20,6 +20,29 @@ against this build.
 > `dist/superseded/` and is byte-identical to `1.1.6.tgz` apart from the
 > version string inside its manifest.
 
+## [1.1.8] — 2026-10-23
+
+### Added
+
+- **置顶会话现在抬到分类之上。** Previously a pin only made the row lead its
+  own category, so a pinned Session could never leave the group that owns it —
+  the group order is what decides where a row appears, and the pin was applied
+  inside the group. The category projection now lifts every pinned Session into
+  one global section rendered above every category, so a pin reads as a
+  statement about the whole list. The Host-side pin verbs
+  (`pinSession` / `unpinSession`) are untouched; only the rendering changed.
+
+- **「视图选项」新增「置顶会话」开关。** The new view option switches between
+  the two readings of a pin:
+  - 「置顶到分类上方」(default) — the pinned Session leaves its category and
+    renders in one global section above every category;
+  - 「保留在所属分类」 — the pinned Session stays in the category that owns it
+    and merely leads that category.
+
+  The choice is persisted with the rest of the browsing state
+  (`dsh.session-categories.view.v2`), so it survives reloads and surface
+  remounts.
+
 ## [1.1.7] — 2026-10-20
 
 ### Fixed
