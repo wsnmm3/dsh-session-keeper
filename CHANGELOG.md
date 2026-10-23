@@ -20,6 +20,19 @@ against this build.
 > `dist/superseded/` and is byte-identical to `1.1.6.tgz` apart from the
 > version string inside its manifest.
 
+## [1.1.9] — 2026-10-23
+
+### Fixed
+
+- **置顶开关导致的侧边栏渲染崩溃（1.1.8 回归）。** 1.1.8 把「置顶到分类上方」开关接进分类树渲染时，
+  hoistPinned 是在 WorkspaceBrowser 组件里读取的状态，却直接被 SessionTree 内部的
+  renderGroup 使用 —— 跨组件作用域，运行时抛 ReferenceError: hoistPinned is not defined。
+  整个 sidebar.workspaces slot entry 因此崩溃，侧边栏静默回落到宿主自带的会话 UI，
+  表现为「置顶抬升和开关都不生效」。现在该状态改为通过 prop 通道传进 SessionTree，
+  跨组件引用消除，崩溃不再发生。
+
+  升级到 1.1.9 即可 —— Host 侧接口、回收站八动词、置顶语义均无变化。
+
 ## [1.1.8] — 2026-10-23
 
 ### Added

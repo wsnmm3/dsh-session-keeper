@@ -318,6 +318,8 @@ type SessionTreeProps = Pick<
   onSessionUnpin: (sessionId: SessionNode['id']) => void
   /** Registry-global pin set, handed to every row this tree builds. */
   pinnedSessionIds: readonly SessionNode['id'][]
+  /** Whether pinned Sessions render in one global section above the categories. */
+  hoistPinned: boolean
   /** Session order behavior: fixed after edits, or additionally promoted by user activity. */
   orderBy: SessionOrderBy
   categorySnapshots: Readonly<Record<string, SessionCategorySnapshot>>
@@ -340,6 +342,7 @@ function SessionTree({
   categoryExpansion, setCategoryExpanded, onCreateCategory, onDeleteCategory,
   onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, onSessionUnarchive, onSessionDelete,
   onSessionPin, onSessionUnpin, pinnedSessionIds,
+  hoistPinned,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t,
@@ -1826,6 +1829,7 @@ export function WorkspaceBrowser({
                 onSessionUnpin={onSessionUnpin}
                 pinnedSessionIds={pinnedSessionIds}
                 forkSession={forkSession}
+                hoistPinned={hoistPinned}
                 workspaces={workspaces}
                 groupExpansion={groupExpansion}
                 setGroupExpanded={actions.setGroupExpanded}
