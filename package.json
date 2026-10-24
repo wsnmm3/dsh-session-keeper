@@ -1,11 +1,103 @@
 {
-  "name": "dsh-session-categories-build",
-  "private": true,
+  "name": "dsh-session-keeper",
   "version": "1.1.9",
   "description": "DeepSeek Harness 的会话管理插件：工作区独立的分类树、拖拽排序、置顶、归档分区，以及可撤回的删除回收站。",
+  "license": "MIT",
   "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/spec.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts",
+    "lib/client.js",
+    "lib/client.js.map",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "FORK-NOTES.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "plugin",
+    "session",
+    "category",
+    "workspace",
+    "archive",
+    "recycle-bin",
+    "session-manager"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WSNMM3/dsh-session-keeper.git"
+  },
+  "homepage": "https://github.com/WSNMM3/dsh-session-keeper#readme",
+  "bugs": {
+    "url": "https://github.com/WSNMM3/dsh-session-keeper/issues"
+  },
+  "author": "WSNMM3",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-store",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-api-gateway"
+      ],
+      "platform": "web"
+    }
+  },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "node scripts/test-tree-shim.mjs && node scripts/test-workspace-tree.mjs && node scripts/test-pin-hoist.mjs"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tsdown/css": "^0.23.1",
@@ -14,8 +106,64 @@
     "tsdown": "0.22.2",
     "typescript": "6.0.3"
   },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "zod": "^4.6.7"
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.4 <5.0.0",
+    "@deepseek-ai/dsh-brand": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-api-gateway": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-locale": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-store": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-ui-conversation": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-ui-primitives": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-ui-sidebar": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-client-ui-slots": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-invariants": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-session": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-storage-domain": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-typert-protocol": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0",
+    "@deepseek-ai/dsh-workspace": ">=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-brand": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-api-gateway": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-locale": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-store": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-conversation": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-primitives": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-sidebar": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-slots": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-invariants": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-storage-domain": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-typert-protocol": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-workspace": {
+      "optional": true
+    }
   }
 }

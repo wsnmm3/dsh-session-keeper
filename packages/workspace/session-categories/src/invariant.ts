@@ -1,4 +1,4 @@
-/** Package-owned invariant companion. @module @deepseek-ai/dsh-session-categories/invariant */
+/** Package-owned invariant companion. @module dsh-session-keeper/invariant */
 
 /* jscpd:ignore-start */
 import type { Context } from '@deepseek-ai/cordis'
@@ -6,7 +6,7 @@ import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain'
 import { sessionCategoryDocumentSchema } from './spec.ts'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-session-categories'
+const PACKAGE_NAME = 'dsh-session-keeper'
 
 /** Cordis companion plugin name. */
 export const name = 'session-categories-invariant'

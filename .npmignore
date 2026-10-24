@@ -1,0 +1,8 @@
+# Keep backup files and build scratch out of the published tarball.
+*.bak-*
+_backups/
+tmp-*
+dist/
+_recovered-css/
+*.tgz
+*.tsbuildinfo

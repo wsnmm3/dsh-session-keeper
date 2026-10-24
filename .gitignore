@@ -6,3 +6,4 @@ packages/**/lib/
 dist/
 _recovered-css/
 *.bak-*
+_backups/
