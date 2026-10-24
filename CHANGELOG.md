@@ -20,6 +20,38 @@ against this build.
 > `dist/superseded/` and is byte-identical to `1.1.6.tgz` apart from the
 > version string inside its manifest.
 
+## [1.2.0] — 2026-10-24
+
+### Changed
+
+- **peerDependencies 从 `"*"` 收紧到能匹配预发布版的显式范围。** 之前 14 个 `@deepseek-ai/*`
+  全部声明为 `"*"`，而 semver 里 `"*"` **不匹配任何预发布版本** —— harness 实际提供的
+  13 个 dsh-* peer 全是 `0.2.0-rc.2` 这类预发布版，`^0.2.0` 同样匹配不上。
+  结果是安装时这些 peer 被静默排除，pnpm 侧表现为 ERESOLVE。
+  现在改为：cordis `>=4.0.4 <5.0.0`，其余 13 个
+  `>=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-alpha.1 <0.4.0-0`，并全部标记 `peerDependenciesMeta.optional`。
+  验证（semver 实测）：`0.2.0-rc.2` / `0.2.1-rc.3` / `0.2.1-alpha.5` / `0.2.0` / `0.2.1` / `0.3.0` 命中，
+  `0.4.0` / `0.1.0` 不命中；cordis `4.0.4` 命中。
+
+### Fixed
+
+- **发布包里的 invariant companion 曾在错误的包名下注册。** `lib/invariant.js` 里硬编码的
+  `PACKAGE_NAME` 是上游 scope 名 `@deepseek-ai/dsh-session-categories`，而发行包名是
+  `dsh-session-keeper`，两者不是同一个 key，宿主侧的 invariant 注册会与上游包撞车。
+  源码里的常量已改为 `dsh-session-keeper`，重新构建后产物自带正确名字。
+
+### Added
+
+- **仓库根 package.json 现在自描述为可安装的插件清单。** 声明了 `dsh.bundle` 与
+  `dsh.client`，去掉了 `private`，`cordis.patch.yml` 里的行名与包名一致，
+  发行布局（`lib/typert.host.js`、`lib/types/*`）一并纳入版本控制。
+  这让仓库本身就能被插件市场与清单收录流程识别，无需依赖构建工作区。
+
+### Removed
+
+- **发行包里不再混入备份文件。** npm 打包会强制收录 `README*`，此前根目录的
+  `README.md.bak-*` 会被打进 tarball；现由 `.npmignore` 拦截，备份另存于 `_backups/`。
+
 ## [1.1.9] — 2026-10-23
 
 ### Fixed
