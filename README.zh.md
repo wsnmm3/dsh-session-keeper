@@ -9,7 +9,7 @@
 | --- | --- |
 | 包名 | `dsh-session-keeper` |
 | 显示名 | **会话管理**（设置 → 插件里的 tab 就是这个名字） |
-| 版本 | `1.2.0` |
+| 版本 | `1.2.1` |
 | 许可 | MIT |
 | 形态 | 一个包内含 Host 入口 + Web Client bundle + Cordis profile patch，不需要另装 Client / Bundle |
 
@@ -165,7 +165,7 @@ pnpm dsh --profile web
 从 tarball 装（离线或想锁定版本时）：
 
 ```sh
-dsh plugin --profile web add ./dsh-session-keeper-1.2.0.tgz
+dsh plugin --profile web add ./dsh-session-keeper-1.2.1.tgz
 ```
 
 装完**重启 dsh**。插件注册三个 slot：`sidebar.workspaces`、`settings.plugins.tab`、`sidebar.footer.action`，

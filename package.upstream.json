@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-keeper",
   "description": "DeepSeek Harness 的会话管理插件：工作区独立的分类树、拖拽排序、置顶、归档分区，以及可撤回的删除回收站。",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publishConfig": {
     "access": "public"
   },

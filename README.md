@@ -9,7 +9,7 @@ Every Workspace keeps its own categories, every session belongs to at most one c
 | --- | --- |
 | Package | `dsh-session-keeper` |
 | Display name | **会话管理** (Session Manager) — the tab under Settings → Plugins |
-| Version | `1.2.0` |
+| Version | `1.2.1` |
 | License | MIT |
 | Shape | Host entry + Web client bundle + Cordis profile patch in one package. No separate Client or Bundle package. |
 
@@ -179,7 +179,7 @@ The repository already contains generated runtime files, so **no separate plugin
 From a tarball (offline, or to pin a version):
 
 ```sh
-dsh plugin --profile web add ./dsh-session-keeper-1.2.0.tgz
+dsh plugin --profile web add ./dsh-session-keeper-1.2.1.tgz
 ```
 
 Restart dsh afterwards. The plugin registers three slots — `sidebar.workspaces`, `settings.plugins.tab` and
