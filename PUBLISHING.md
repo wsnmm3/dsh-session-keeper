@@ -98,7 +98,7 @@
 | 要求 | 状态 |
 |---|---|
 | 唯一 npm 包名 | ✅ **`dsh-session-keeper`**（2026-10-18 实查 registry 404 = 未被占用） |
-| npm `latest` 是精确稳定版 | ✅ `1.2.0`（无 prerelease 后缀） |
+| npm `latest` 是精确稳定版 | ✅ `1.2.1`（无 prerelease 后缀） |
 | manifest 声明 `dsh.bundle.patch` | ✅ `./cordis.patch.yml` |
 | `cordis.patch.yml` 存在且合法 | ✅ `name: 'dsh-session-keeper'` 与 manifest 一致 |
 | 包可被 pnpm 安装 | ✅ 已解包验证，8 个导出路径全部可解析 |
@@ -109,7 +109,7 @@
 1. **npm 账号登录** — ✅ 已完成（`npm whoami` → `wwiyy`；granular token 在 `C:\Users\ASUS 98\.npmrc`，**2026-11-17 过期**）
 2. **GitHub 仓库** — ✅ 已完成（`gh auth status` → `wsnmm3`；仓库 https://github.com/wsnmm3/dsh-session-keeper）
 3. **包名** — ✅ 已定为 `dsh-session-keeper`，见下文「命名」
-4. **GitHub Release** — ✅ `v1.2.0` 已建并附 tgz
+4. **GitHub Release** — ✅ `v1.2.1` 已建并附 tgz（360635 B，sha1 `d4a3bf4ab91a5c852b176ece6b4149a381f4de00`，与 npm 上的 shasum 一致）
 
 ## 六、命名
 
