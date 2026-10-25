@@ -20,6 +20,14 @@ against this build.
 > `dist/superseded/` and is byte-identical to `1.1.6.tgz` apart from the
 > version string inside its manifest.
 
+## [Unreleased]
+
+### Documentation
+
+- **README 与包版本对齐。** 两份 README 头部还写着 `1.1.6`（实际已发到 `1.2.0`），现改为 `1.2.0`，tarball 安装示例同步指向 `dsh-session-keeper-1.2.0.tgz`。
+- **补上「不能与上游同时安装」的互斥说明。** 本插件与上游 `@deepseek-ai/dsh-session-categories` 抢同一个 `sidebar.workspaces` 槽位、开同一个存储域（`session_categories`，version 0），同时安装会互相顶掉侧边栏并写进同一份分类文档 —— 二选一。
+- **文档化置顶抬升与视图开关。** 1.1.8 起置顶行可抬进所有分类之上的全局置顶段；视图菜单新增「置顶到分类上方 / 保留在所属分类」开关（默认前者），此前 README 未提。
+
 ## [1.2.0] — 2026-10-24
 
 ### Changed

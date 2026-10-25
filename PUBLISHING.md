@@ -66,27 +66,28 @@
 
 ```
 ① 发 npm（硬门槛，两条路都要）
-   └─ 包名 dsh-session-keeper + version 1.1.6 + package.json 里 dsh.bundle.patch 指向 cordis.patch.yml
+   └─ 包名 dsh-session-keeper + version 1.2.0 + package.json 里 dsh.bundle.patch 指向 cordis.patch.yml
 
 ② 建 GitHub 仓库 WSNMM3/dsh-session-keeper
    └─ 仓库名与包名一致，README 写清是 DSH 插件
    └─ 放源码 + 已构建产物 + 标注 dsh / dsh-plugin / deepseek-harness 之类 topic
 
-③ 打 tag + 建 GitHub Release（v1.1.6，附 tgz）
+③ 打 tag + 建 GitHub Release（v1.2.0，附 tgz）
    └─ 很多分发渠道只认 Release，不抓 npm
 
 ④ 等 1024Store 扫到（每日更新），用户就能在市场里搜到并一键安装
 ```
 
-**进度（2026-10-18 22:10）**
+**进度（2026-10-25 13:10）**
 
 | 步骤 | 状态 |
-|---|---|
-| ① npm 发布 | ✅ `dsh-session-keeper@1.1.6`，`dist-tags.latest = 1.1.6` |
-| ② GitHub 仓库 | ✅ https://github.com/wsnmm3/dsh-session-keeper（86 文件，`main` 分支） |
+| --- | --- |
+| ① npm 发布 | ✅ `dsh-session-keeper@1.2.0`，`dist-tags.latest = 1.2.0` |
+| ② GitHub 仓库 | ✅ https://github.com/wsnmm3/dsh-session-keeper（`main` 分支） |
 | ② 仓库 topic | ✅ `dsh` / `dsh-plugin` / `deepseek-harness` / `cordis` / `session-manager` / `session-categories` / `plugin` / `typescript` |
 | ② 仓库 homepage | ✅ 指向 npm 包页 |
-| ③ Release | ✅ `v1.1.6`，含 `dsh-session-keeper-1.1.6.tgz`（344399 B，sha256 `4644572722759c6a5b5739460a65b225c96a2a99ca87198c0798cb65f529fa45`） |
+| ③ Release | ✅ `v1.2.0`，含 `dsh-session-keeper-1.2.0.tgz`（359462 B，sha256 `194937183a4617942acd144d61da3940b33eb1c4d98856048713eef8f6ccfe5f`） |
+| ④ 清单收录 | ✅ 已收录进 awesome-dsh-plugin（`data/plugins/WSNMM3__dsh-session-keeper.yml`） |
 | ④ 等市场扫到 | ⏳ 每日更新，无公开触发文档 |
 
 ⚠️ 顺序不能反：**先 npm 后 GitHub**。因为市场点安装时是去 npm 查 `latest`，
@@ -97,7 +98,7 @@
 | 要求 | 状态 |
 |---|---|
 | 唯一 npm 包名 | ✅ **`dsh-session-keeper`**（2026-10-18 实查 registry 404 = 未被占用） |
-| npm `latest` 是精确稳定版 | ✅ `1.1.6`（无 prerelease 后缀） |
+| npm `latest` 是精确稳定版 | ✅ `1.2.0`（无 prerelease 后缀） |
 | manifest 声明 `dsh.bundle.patch` | ✅ `./cordis.patch.yml` |
 | `cordis.patch.yml` 存在且合法 | ✅ `name: 'dsh-session-keeper'` 与 manifest 一致 |
 | 包可被 pnpm 安装 | ✅ 已解包验证，8 个导出路径全部可解析 |
@@ -108,7 +109,7 @@
 1. **npm 账号登录** — ✅ 已完成（`npm whoami` → `wwiyy`；granular token 在 `C:\Users\ASUS 98\.npmrc`，**2026-11-17 过期**）
 2. **GitHub 仓库** — ✅ 已完成（`gh auth status` → `wsnmm3`；仓库 https://github.com/wsnmm3/dsh-session-keeper）
 3. **包名** — ✅ 已定为 `dsh-session-keeper`，见下文「命名」
-4. **GitHub Release** — ✅ `v1.1.6` 已建并附 tgz
+4. **GitHub Release** — ✅ `v1.2.0` 已建并附 tgz
 
 ## 六、命名
 

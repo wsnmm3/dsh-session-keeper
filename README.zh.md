@@ -9,13 +9,17 @@
 | --- | --- |
 | 包名 | `dsh-session-keeper` |
 | 显示名 | **会话管理**（设置 → 插件里的 tab 就是这个名字） |
-| 版本 | `1.1.6` |
+| 版本 | `1.2.0` |
 | 许可 | MIT |
 | 形态 | 一个包内含 Host 入口 + Web Client bundle + Cordis profile patch，不需要另装 Client / Bundle |
 
 > **这是谁的代码？** 本项目是 [ht719/dsh-session-categories](https://github.com/ht719/dsh-session-categories)（`0.1.0`，MIT）的**维护分支**。
 > 上游那份装进当前版本的 dsh 会直接打不开窗口，本仓库在它之上做了移植与扩展。
 > 每一项改动**来自哪里**（上游基线 / 竞品思路 / 使用者反馈）都记在 [CHANGELOG.md](CHANGELOG.md)；移植的技术细节在 [FORK-NOTES.md](FORK-NOTES.md)。
+>
+> **不要与上游包同时安装。** `dsh-session-keeper` 与 `@deepseek-ai/dsh-session-categories` 抢的是同一个
+> `sidebar.workspaces` 槽位，打开的也是同一个存储域（`session_categories`，version 0）。两个一起装，
+> 侧边栏会互相顶掉，分类文档也会被写进同一份。二选一：这个分支，或者上游。
 
 ---
 
@@ -74,7 +78,7 @@ dsh 的模块加载器会拿插件的 `inject` 声明去解析 bundle 里的 `re
 | --- | --- |
 | 重命名 | 改标题 |
 | 分叉会话 | 在最后一个完成的回合处分叉 |
-| 置顶会话 / 取消置顶 | 把行移到所属分组顶部；文案跟随注册表里的置顶状态 |
+| 置顶会话 / 取消置顶 | 标记该行醒目：置顶行会被抬进所有分类上方的全局置顶段，或者留在自己所属的分组里 |
 | 归档会话 / 取消归档 | 归档该行，或把归档行放回原位 |
 | 移动到分类… | 改派到别的分类，或放回未分类尾部 |
 | 删除会话 | 把会话记录移进回收站（见第 5 节） |
@@ -98,6 +102,14 @@ dsh 的模块加载器会拿插件的 `inject` 声明去解析 bundle 里的 `re
 - **仅显示已归档** —— 工作区分组全部隐藏，只剩归档分区。
 
 第二项写「包括」而不是官方的「显示」，是有意为之；行为完全一致。
+
+**置顶位置**（一个开关，管所有置顶行）：
+
+- **置顶到分类上方** —— 置顶行从各自分类里抽出来，汇成**所有分类之上**的全局置顶段。置顶说的是
+  「在整个列表里醒目」，不是「在某个分组里靠前」；
+- **保留在所属分类** —— 置顶行留在自己所属的分组里，只在那个分组内靠前。
+
+开关在同一个视图菜单里，默认是**置顶到分类上方**。
 
 ### 5. 删除与回收站
 
@@ -153,7 +165,7 @@ pnpm dsh --profile web
 从 tarball 装（离线或想锁定版本时）：
 
 ```sh
-dsh plugin --profile web add ./dsh-session-keeper-1.1.6.tgz
+dsh plugin --profile web add ./dsh-session-keeper-1.2.0.tgz
 ```
 
 装完**重启 dsh**。插件注册三个 slot：`sidebar.workspaces`、`settings.plugins.tab`、`sidebar.footer.action`，

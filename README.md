@@ -9,7 +9,7 @@ Every Workspace keeps its own categories, every session belongs to at most one c
 | --- | --- |
 | Package | `dsh-session-keeper` |
 | Display name | **会话管理** (Session Manager) — the tab under Settings → Plugins |
-| Version | `1.1.6` |
+| Version | `1.2.0` |
 | License | MIT |
 | Shape | Host entry + Web client bundle + Cordis profile patch in one package. No separate Client or Bundle package. |
 
@@ -18,6 +18,11 @@ Every Workspace keeps its own categories, every session belongs to at most one c
 > The upstream package will not open on a current dsh at all. This repository ports it and then extends it.
 > Every change records **where it came from** (upstream baseline, an idea taken from a competing plugin, or a
 > user report) in [CHANGELOG.md](CHANGELOG.md); the porting details live in [FORK-NOTES.md](FORK-NOTES.md).
+>
+> **Do not install this together with the upstream package.** `dsh-session-keeper` and
+> `@deepseek-ai/dsh-session-categories` both claim the `sidebar.workspaces` slot and both open the
+> same storage domain (`session_categories`, version 0). Side by side they fight over the sidebar and
+> write into one category document. Pick one — this fork, or upstream.
 
 ---
 
@@ -82,7 +87,7 @@ takes that spot.
 | --- | --- |
 | 重命名 / Rename | Rename the session |
 | 分叉会话 / Fork | Fork at the last completed turn |
-| 置顶会话 / 取消置顶 | Move the row to the top of its group; the label follows the registry pin state |
+| 置顶会话 / 取消置顶 | Mark the row as prominent: pinned rows are hoisted into one global section above every category, or stay inside their own group — see the view menu in §4 |
 | 归档会话 / 取消归档 | Archive the row, or return an archived row to its slot |
 | 移动到分类… / Move to category | Reassign to another category, or drop back to the unclassified tail |
 | 删除会话 / Delete | Move the stored log into the recovery bin (see §5) |
@@ -107,6 +112,14 @@ Paths are normalized before comparison (Windows separators, trailing separators 
 - **Archived only** — workspace groups are suppressed and only the archive section renders.
 
 The second label reads 包括 rather than the official 显示 on purpose; the behaviour is identical.
+
+**Pinned sessions** (one switch for every pinned row):
+
+- **Hoist above categories** — pinned rows are pulled out of their category and gathered into one global
+  section **above every category**. A pin is a statement about the whole list, not about one group;
+- **Keep in their category** — pinned rows stay in the group they belong to and only lead that group.
+
+The switch sits in the same view menu and defaults to **Hoist above categories**.
 
 ### 5. Delete and the recovery bin
 
@@ -166,7 +179,7 @@ The repository already contains generated runtime files, so **no separate plugin
 From a tarball (offline, or to pin a version):
 
 ```sh
-dsh plugin --profile web add ./dsh-session-keeper-1.1.6.tgz
+dsh plugin --profile web add ./dsh-session-keeper-1.2.0.tgz
 ```
 
 Restart dsh afterwards. The plugin registers three slots — `sidebar.workspaces`, `settings.plugins.tab` and
