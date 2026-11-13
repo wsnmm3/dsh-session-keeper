@@ -715,6 +715,7 @@ function SessionTree({
               return (
               <div key={node.id} role="group" className={clsx(css.categoryGroup, node.expanded && css.categoryGroupExpanded)}
                 data-category-container={node.expanded ? 'expanded' : 'collapsed'}
+                data-category-group={node.id}
                 style={{ '--category-depth': depth } as React.CSSProperties}>
                 <CategoryRowItem node={node} workspaceId={workspaceId!} depth={depth}
                   categoryOptions={categoryChoices} invalidMoveTargetIds={invalidTargetsForSource(node.id)}
