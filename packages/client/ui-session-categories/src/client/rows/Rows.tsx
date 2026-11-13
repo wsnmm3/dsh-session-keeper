@@ -351,6 +351,8 @@ export function CategoryRowItem({
       role="treeitem"
       aria-label={node.title}
       aria-expanded={node.expanded}
+      data-category-id={node.id}
+      data-category-name={node.title}
       data-category-drop-target={dropTarget ? 'true' : undefined}
       title={node.title}
       draggable={!renaming}
